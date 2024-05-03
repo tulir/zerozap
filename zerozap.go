@@ -27,6 +27,7 @@ var levelMap = map[zapcore.Level]zerolog.Level{
 	zapcore.FatalLevel:  zerolog.FatalLevel,
 }
 
+// ZeroZap is a [zapcore.Core] that logs to a [zerolog.Logger].
 type ZeroZap struct {
 	zerolog.Logger
 }
