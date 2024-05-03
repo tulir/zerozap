@@ -128,7 +128,16 @@ func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	if entry.Caller.Defined {
 		evt.Str(zerolog.CallerFieldName, zerolog.CallerMarshalFunc(entry.Caller.PC, entry.Caller.File, entry.Caller.Line))
 	}
-	for _, f := range fields {
+	err := fieldsToEvent(fields, evt)
+	if err != nil {
+		return err
+	}
+	evt.Msg(entry.Message)
+	return nil
+}
+
+func fieldsToEvent(fields []zapcore.Field, evt *zerolog.Event) error {
+	for i, f := range fields {
 		switch f.Type {
 		case zapcore.ArrayMarshalerType:
 			ap := &arrayProxy{arr: f.Interface.(zapcore.ArrayMarshaler)}
@@ -182,8 +191,14 @@ func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 		case zapcore.ReflectType:
 			evt.Any(f.Key, f.Interface)
 		case zapcore.NamespaceType:
-			// TODO implement
-			return fmt.Errorf("unsupported field type namespace")
+			subEvt := zerolog.Dict()
+			err := fieldsToEvent(fields[i+1:], subEvt)
+			if err != nil {
+				return err
+			}
+			evt.Dict(f.Key, subEvt)
+			// All fields were already consumed
+			return nil
 		case zapcore.StringerType:
 			// TODO catch panics like zap does in encodeStringer?
 			evt.Stringer(f.Key, f.Interface.(fmt.Stringer))
@@ -195,7 +210,6 @@ func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 			return fmt.Errorf("unknown field type: %v", f)
 		}
 	}
-	evt.Msg(entry.Message)
 	return nil
 }
 

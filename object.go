@@ -16,7 +16,8 @@ import (
 )
 
 type zeroObject struct {
-	evt *zerolog.Event
+	evt    *zerolog.Event
+	finish func()
 }
 
 var _ zapcore.ObjectEncoder = (*zeroObject)(nil)
@@ -29,7 +30,11 @@ type objectProxy struct {
 var _ zerolog.LogObjectMarshaler = (*objectProxy)(nil)
 
 func (op *objectProxy) MarshalZerologObject(evt *zerolog.Event) {
-	op.err = op.obj.MarshalLogObject(&zeroObject{evt: evt})
+	zo := &zeroObject{evt: evt}
+	op.err = op.obj.MarshalLogObject(zo)
+	if zo.finish != nil {
+		zo.finish()
+	}
 }
 
 func (z *zeroObject) AddArray(key string, marshaler zapcore.ArrayMarshaler) error {
@@ -134,5 +139,15 @@ func (z *zeroObject) AddReflected(key string, value interface{}) error {
 }
 
 func (z *zeroObject) OpenNamespace(key string) {
+	parentEvt := z.evt
+	prevFinish := z.finish
+	subEvt := zerolog.Dict()
 
+	z.evt = subEvt
+	z.finish = func() {
+		parentEvt.Dict(key, subEvt)
+		if prevFinish != nil {
+			prevFinish()
+		}
+	}
 }
