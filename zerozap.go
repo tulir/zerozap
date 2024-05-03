@@ -34,7 +34,7 @@ type ZeroZap struct {
 var _ zapcore.Core = (*ZeroZap)(nil)
 
 func (z *ZeroZap) Enabled(level zapcore.Level) bool {
-	return z.GetLevel() >= levelMap[level]
+	return z.GetLevel() <= levelMap[level]
 }
 
 func (z *ZeroZap) With(fields []zapcore.Field) zapcore.Core {
