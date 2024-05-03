@@ -110,13 +110,15 @@ func (z *ZeroZap) With(fields []zapcore.Field) zapcore.Core {
 	return &ZeroZap{Logger: logWith.Logger()}
 }
 
-func (z *ZeroZap) Check(entry zapcore.Entry, entry2 *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	//TODO wtf is this supposed to do?
-	panic("implement me")
+func (z *ZeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if z.Enabled(ent.Level) {
+		return ce.AddCore(ent, z)
+	}
+	return ce
 }
 
 func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	evt := z.Logger.WithLevel(levelMap[entry.Level])
+	evt := z.WithLevel(levelMap[entry.Level])
 	// TODO is this a good idea? it'll probably lead to the field being duplicated
 	evt.Time(zerolog.TimestampFieldName, entry.Time)
 	if entry.Stack != "" {
