@@ -28,14 +28,13 @@ var levelMap = map[zapcore.Level]zerolog.Level{
 	zapcore.FatalLevel:  zerolog.FatalLevel,
 }
 
-// ZeroZap is a [zapcore.Core] that logs to a [zerolog.Logger].
-type ZeroZap struct {
+type zeroZap struct {
 	zerolog.Logger
 }
 
 // New creates a new [zapcore.Core] using the given zerolog instance.
 func New(log zerolog.Logger) zapcore.Core {
-	return &ZeroZap{Logger: log}
+	return &zeroZap{Logger: log}
 }
 
 // Option creates a [zap.Option] that will replace the core of an existing zap logger with a ZeroZap core.
@@ -45,13 +44,17 @@ func Option(log zerolog.Logger) zap.Option {
 	})
 }
 
-var _ zapcore.Core = (*ZeroZap)(nil)
+func (z *zeroZap) SetLogger(log zerolog.Logger) {
+	z.Logger = log
+}
 
-func (z *ZeroZap) Enabled(level zapcore.Level) bool {
+var _ zapcore.Core = (*zeroZap)(nil)
+
+func (z *zeroZap) Enabled(level zapcore.Level) bool {
 	return z.GetLevel() <= levelMap[level]
 }
 
-func (z *ZeroZap) With(fields []zapcore.Field) zapcore.Core {
+func (z *zeroZap) With(fields []zapcore.Field) zapcore.Core {
 	logWith := z.Logger.With()
 	for _, f := range fields {
 		switch f.Type {
@@ -121,10 +124,10 @@ func (z *ZeroZap) With(fields []zapcore.Field) zapcore.Core {
 			panic(fmt.Sprintf("unknown field type: %v", f))
 		}
 	}
-	return &ZeroZap{Logger: logWith.Logger()}
+	return &zeroZap{Logger: logWith.Logger()}
 }
 
-func (z *ZeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+func (z *zeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	if z.Enabled(ent.Level) {
 		return ce.AddCore(ent, z)
 	}
@@ -143,7 +146,7 @@ var (
 	CopyCaller = true
 )
 
-func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
+func (z *zeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	evt := z.WithLevel(levelMap[entry.Level])
 	if CopyTime {
 		evt.Time(zerolog.TimestampFieldName, entry.Time)
@@ -239,6 +242,6 @@ func fieldsToEvent(fields []zapcore.Field, evt *zerolog.Event) error {
 	return nil
 }
 
-func (z *ZeroZap) Sync() error {
+func (z *zeroZap) Sync() error {
 	return nil
 }

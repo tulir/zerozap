@@ -64,7 +64,7 @@ func TestZeroZap(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var buf strings.Builder
-			test.fn(zap.New(&zerozap.ZeroZap{Logger: zerolog.New(&buf)}))
+			test.fn(zap.New(zerozap.New(zerolog.New(&buf))))
 			if out := buf.String(); out != test.expected {
 				t.Errorf("expected:\n%s\ngot:\n%s", test.expected, out)
 			}
