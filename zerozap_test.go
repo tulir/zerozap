@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	zerozap.OmitTime = true
+	zerozap.CopyTime = false
 }
 
 func ExampleNew() {

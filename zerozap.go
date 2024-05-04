@@ -131,18 +131,27 @@ func (z *ZeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Ch
 	return ce
 }
 
-var OmitTime = false
+var (
+	// CopyTime controls whether the time field from zap is copied to zerolog.
+	// The time will be placed in [zerolog.TimestampFieldName].
+	CopyTime = true
+	// CopyStack controls whether the stack field from zap (if present) is copied to zerolog.
+	// The stack string will be placed in [zerolog.ErrorStackFieldName].
+	CopyStack = true
+	// CopyCaller controls whether the caller field from zap (if present) is copied to zerolog.
+	// The caller info will be placed in [zerolog.CallerFieldName] after being marshaled using [zerolog.CallerMarshalFunc].
+	CopyCaller = true
+)
 
 func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	evt := z.WithLevel(levelMap[entry.Level])
-	if !OmitTime {
-		// TODO is this a good idea? it'll probably lead to the field being duplicated
+	if CopyTime {
 		evt.Time(zerolog.TimestampFieldName, entry.Time)
 	}
-	if entry.Stack != "" {
+	if entry.Stack != "" && CopyStack {
 		evt.Str(zerolog.ErrorStackFieldName, entry.Stack)
 	}
-	if entry.Caller.Defined {
+	if entry.Caller.Defined && CopyCaller {
 		evt.Str(zerolog.CallerFieldName, zerolog.CallerMarshalFunc(entry.Caller.PC, entry.Caller.File, entry.Caller.Line))
 	}
 	err := fieldsToEvent(fields, evt)
