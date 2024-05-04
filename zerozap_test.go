@@ -7,6 +7,7 @@
 package zerozap_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -16,8 +17,30 @@ import (
 	"go.mau.fi/zerozap"
 )
 
+func init() {
+	zerozap.OmitTime = true
+}
+
+func ExampleNew() {
+	zlog := zerolog.New(os.Stdout)
+
+	zaplog := zap.New(zerozap.New(zlog))
+	zaplog.Info("Hello, world!")
+	// Output: {"level":"info","message":"Hello, world!"}
+}
+
+func ExampleOption() {
+	zlog := zerolog.New(os.Stdout)
+
+	zaplog := zap.NewNop()
+	zaplog.Info("This is not logged")
+
+	zaplog = zaplog.WithOptions(zerozap.Option(zlog))
+	zaplog.Info("This is logged")
+	// Output: {"level":"info","message":"This is logged"}
+}
+
 func TestZeroZap(t *testing.T) {
-	zerolog.TimeFieldFormat = "meow"
 	tests := []struct {
 		name     string
 		expected string
@@ -25,10 +48,10 @@ func TestZeroZap(t *testing.T) {
 	}{
 		{
 			name: "Generic",
-			expected: `{"level":"info","time":"meow","message":"Hello, world!"}
-{"level":"info","time":"meow","int":42,"str":"meow","true":false,"message":"Normal fields"}
-{"level":"info","time":"meow","meow??":{"subfield":1,"meow!!":{"subsubfield":2}},"message":"Namespaced fields"}
-{"level":"info","time":"meow","meow":["me","o","w"],"message":"Array"}
+			expected: `{"level":"info","message":"Hello, world!"}
+{"level":"info","int":42,"str":"meow","true":false,"message":"Normal fields"}
+{"level":"info","meow??":{"subfield":1,"meow!!":{"subsubfield":2}},"message":"Namespaced fields"}
+{"level":"info","meow":["me","o","w"],"message":"Array"}
 `,
 			fn: func(logger *zap.Logger) {
 				logger.Info("Hello, world!")

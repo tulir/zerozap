@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -30,6 +31,18 @@ var levelMap = map[zapcore.Level]zerolog.Level{
 // ZeroZap is a [zapcore.Core] that logs to a [zerolog.Logger].
 type ZeroZap struct {
 	zerolog.Logger
+}
+
+// New creates a new [zapcore.Core] using the given zerolog instance.
+func New(log zerolog.Logger) zapcore.Core {
+	return &ZeroZap{Logger: log}
+}
+
+// Option creates a [zap.Option] that will replace the core of an existing zap logger with a ZeroZap core.
+func Option(log zerolog.Logger) zap.Option {
+	return zap.WrapCore(func(_ zapcore.Core) zapcore.Core {
+		return New(log)
+	})
 }
 
 var _ zapcore.Core = (*ZeroZap)(nil)
@@ -118,10 +131,14 @@ func (z *ZeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Ch
 	return ce
 }
 
+var OmitTime = false
+
 func (z *ZeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	evt := z.WithLevel(levelMap[entry.Level])
-	// TODO is this a good idea? it'll probably lead to the field being duplicated
-	evt.Time(zerolog.TimestampFieldName, entry.Time)
+	if !OmitTime {
+		// TODO is this a good idea? it'll probably lead to the field being duplicated
+		evt.Time(zerolog.TimestampFieldName, entry.Time)
+	}
 	if entry.Stack != "" {
 		evt.Str(zerolog.ErrorStackFieldName, entry.Stack)
 	}
