@@ -30,11 +30,18 @@ var levelMap = map[zapcore.Level]zerolog.Level{
 
 type zeroZap struct {
 	zerolog.Logger
+
+	levelMap map[zapcore.Level]zerolog.Level
 }
 
 // New creates a new [zapcore.Core] using the given zerolog instance.
 func New(log zerolog.Logger) zapcore.Core {
-	return &zeroZap{Logger: log}
+	return NewWithLevels(log, levelMap)
+}
+
+// NewWithLevels creates a new [zapcore.Core] using the given zerolog instance and level map.
+func NewWithLevels(log zerolog.Logger, levels map[zapcore.Level]zerolog.Level) zapcore.Core {
+	return &zeroZap{Logger: log, levelMap: levels}
 }
 
 // Option creates a [zap.Option] that will replace the core of an existing zap logger with a ZeroZap core.
@@ -51,7 +58,7 @@ func (z *zeroZap) SetLogger(log zerolog.Logger) {
 var _ zapcore.Core = (*zeroZap)(nil)
 
 func (z *zeroZap) Enabled(level zapcore.Level) bool {
-	return z.GetLevel() <= levelMap[level]
+	return z.GetLevel() <= z.levelMap[level]
 }
 
 func (z *zeroZap) With(fields []zapcore.Field) zapcore.Core {
@@ -124,7 +131,7 @@ func (z *zeroZap) With(fields []zapcore.Field) zapcore.Core {
 			panic(fmt.Sprintf("unknown field type: %v", f))
 		}
 	}
-	return &zeroZap{Logger: logWith.Logger()}
+	return &zeroZap{Logger: logWith.Logger(), levelMap: z.levelMap}
 }
 
 func (z *zeroZap) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
@@ -147,7 +154,7 @@ var (
 )
 
 func (z *zeroZap) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	evt := z.WithLevel(levelMap[entry.Level])
+	evt := z.WithLevel(z.levelMap[entry.Level])
 	if CopyTime {
 		evt.Time(zerolog.TimestampFieldName, entry.Time)
 	}
