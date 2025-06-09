@@ -1,6 +1,7 @@
 module go.mau.fi/zerozap
 
-go 1.21
+go 1.23.0
+toolchain go1.24.4
 
 require (
 	github.com/rs/zerolog v1.32.0
